@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<!-- three.js library -->
+<script src='three.js/examples/vendor/three.js/build/three.min.js'></script>
+<script src="three.js/examples/vendor/three.js/examples/js/libs/stats.min.js"></script>
+<!-- ar.js -->
+<script src="three.js/build/ar.js"></script>
+<script>THREEx.ArToolkitContext.baseURL = './'</script>
+
+
+<body style='margin : 0px; overflow: hidden; font-family: Monospace;'><div style='position: absolute; top: 10px; width:100%; text-align: center; z-index: 1;'>
+	Happy Children's Day,my QiuQiu! 
+</div>
+
+		<script src="three.js/build/three.js"></script>
+		<script src="three.js/examples/js/loaders/ColladaLoader.js"></script>
+		<script src="three.js/examples/js/controls/OrbitControls.js"></script>
+		<script src="three.js/examples/js/Detector.js"></script>
+		<script src="three.js/examples/js/libs/stats.min.js"></script>
+<script>
+	//////////////////////////////////////////////////////////////////////////////////
+	//		Init
+	//////////////////////////////////////////////////////////////////////////////////
+	clock = new THREE.Clock();
+	// init renderer
+	var renderer	= new THREE.WebGLRenderer({
+		antialias	: true,
+		alpha: true
+	});
+	renderer.setClearColor(new THREE.Color('lightgrey'), 0)
+	// renderer.setPixelRatio( 1/2 );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.domElement.style.position = 'absolute'
+	renderer.domElement.style.top = '0px'
+	renderer.domElement.style.left = '0px'
+	document.body.appendChild( renderer.domElement );
+
+	// array of functions for the rendering loop
+	var onRenderFcts= [];
+
+	// init scene and camera
+	var scene	= new THREE.Scene();
+	
+	//////////////////////////////////////////////////////////////////////////////////
+	//		Initialize a basic camera
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// Create a camera
+	var camera = new THREE.Camera();
+	scene.add(camera);
+
+	////////////////////////////////////////////////////////////////////////////////
+	//          handle arToolkitSource
+	////////////////////////////////////////////////////////////////////////////////
+
+	var arToolkitSource = new THREEx.ArToolkitSource({
+		// to read from the webcam 
+		sourceType : 'webcam',
+
+		// to read from an image
+		// sourceType : 'image',
+		// sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/images/img.jpg',		
+
+		// to read from a video
+		// sourceType : 'video',
+		// sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/videos/headtracking.mp4',		
+	})
+
+	arToolkitSource.init(function onReady(){
+		onResize()
+	})
+	
+	// handle resize
+	window.addEventListener('resize', function(){
+		onResize()
+	})
+	function onResize(){
+		arToolkitSource.onResize()	
+		arToolkitSource.copySizeTo(renderer.domElement)	
+		if( arToolkitContext.arController !== null ){
+			arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)	
+		}	
+	}
+	////////////////////////////////////////////////////////////////////////////////
+	//          initialize arToolkitContext
+	////////////////////////////////////////////////////////////////////////////////
+	
+
+	// create atToolkitContext
+	var arToolkitContext = new THREEx.ArToolkitContext({
+		cameraParametersUrl: THREEx.ArToolkitContext.baseURL + 'data/data/camera_para.dat',
+		detectionMode: 'mono',
+		maxDetectionRate: 30,
+		canvasWidth: 80*3,
+		canvasHeight: 60*3,
+	})
+	// initialize it
+	arToolkitContext.init(function onCompleted(){
+		// copy projection matrix to camera
+		camera.projectionMatrix.copy( arToolkitContext.getProjectionMatrix() );
+	})
+
+	// update artoolkit on every frame
+	onRenderFcts.push(function(){
+		if( arToolkitSource.ready === false )	return
+
+		arToolkitContext.update( arToolkitSource.domElement )
+	})
+	
+	
+	////////////////////////////////////////////////////////////////////////////////
+	//          Create a ArMarkerControls
+	////////////////////////////////////////////////////////////////////////////////
+	
+	var markerRoot = new THREE.Group
+	scene.add(markerRoot)
+	var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
+		type : 'pattern',
+		patternUrl : THREEx.ArToolkitContext.baseURL + 'data/data/patt.td'
+		// patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.kanji'
+	})
+
+	// build a smoothedControls
+	var smoothedRoot = new THREE.Group()
+	scene.add(smoothedRoot)
+	var smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot, {
+		lerpPosition: 0.4,
+		lerpQuaternion: 0.3,
+		lerpScale: 1,
+	})
+	onRenderFcts.push(function(delta){
+		smoothedControls.update(markerRoot)
+	})
+	//////////////////////////////////////////////////////////////////////////////////
+	//		add an object in the scene
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// var arWorldRoot = smoothedRoot
+
+	// // add a torus knot	
+	// var geometry	= new THREE.CubeGeometry(1,1,1);
+	// var material	= new THREE.MeshNormalMaterial({
+	// 	transparent : true,
+	// 	opacity: 0.5,
+	// 	side: THREE.DoubleSide
+	// }); 
+	
+	// var geometry	= new THREE.TorusKnotGeometry(0.3,0.1,64,16);
+	// var material	= new THREE.MeshNormalMaterial(); 
+	// var mesh	= new THREE.Mesh( geometry, material );
+	// mesh.position.y	= 0.5
+	// arWorldRoot.add( mesh );
+	
+	// onRenderFcts.push(function(){
+	// 	mesh.rotation.x += 0.1
+	// })
+	// actor
+	var loader = new THREE.ColladaLoader();
+	loader.load( 'three.js/examples/models/collada/stormtrooper/stormtrooper.dae', function ( collada ) {
+
+		var animations = collada.animations;
+		var avatar = collada.scene;
+
+		mixer = new THREE.AnimationMixer( avatar );
+		var action = mixer.clipAction( animations[ 0 ] ).play();
+
+		avatar.scale.set( 0.5, 0.5, 0.5 );
+		
+        avatar.position.set( 0, -2, 1 );
+
+        avatar.rotation.set( Math.PI,0,Math.PI); 
+
+		smoothedRoot.add( avatar );
+
+	} );
+	var ambientLight = new THREE.AmbientLight( 0xffffff, 0.8 );
+	smoothedRoot.add( ambientLight );
+
+	var directionalLight = new THREE.DirectionalLight( 0xffffff, 2 );
+	directionalLight.position.set( 1, 1, - 1 );
+	smoothedRoot.add( directionalLight );
+
+	//text
+	var textloader = new THREE.FontLoader();
+
+	textloader.load( 'three.js/examples/fonts/helvetiker_bold.typeface.json', function ( font ) {
+		var textGeo = new THREE.TextBufferGeometry( "Happy Children's Day,my QiuQiu!", {
+			font: font,
+			size: 10,
+			height: 1,
+			curveSegments: 1,
+			bevelThickness: 1,
+			bevelSize: 0,
+			bevelEnabled: true
+		} );
+		textGeo.computeBoundingBox();
+		var centerOffset = - 0.5 * ( textGeo.boundingBox.max.x - textGeo.boundingBox.min.x );
+		var textMaterial = new THREE.MeshPhongMaterial( { color: 0xff0000, specular: 0xffffff } );
+		var mesh = new THREE.Mesh( textGeo, textMaterial );
+		// mesh.position.x = centerOffset;
+		// mesh.position.y = -197;
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		mesh.scale.set( 0.02, 0.02, 0.02 );
+		mesh.position.set( -2, 0, 1);
+		mesh.rotation.set( -Math.PI/2,0,0);
+		smoothedRoot.add( mesh );
+	} );
+	
+	//////////////////////////////////////////////////////////////////////////////////
+	//		render the whole thing on the page
+	//////////////////////////////////////////////////////////////////////////////////
+	var stats = new Stats();
+	document.body.appendChild( stats.dom );
+	// render the scene
+	onRenderFcts.push(function(){
+		renderer.render( scene, camera );
+		stats.update();
+	})
+
+	// run the rendering loop
+	var lastTimeMsec= null
+	requestAnimationFrame(function animate(nowMsec){
+		// keep looping
+		requestAnimationFrame( animate );
+		// measure time
+		lastTimeMsec	= lastTimeMsec || nowMsec-1000/60
+		var deltaMsec	= Math.min(200, nowMsec - lastTimeMsec)
+		lastTimeMsec	= nowMsec
+		// call each update function
+
+		var delta = clock.getDelta();
+
+		if ( mixer !== undefined ) {
+
+			mixer.update( delta );
+
+		}
+		renderer.render( scene, camera );
+
+		onRenderFcts.forEach(function(onRenderFct){
+			onRenderFct(deltaMsec/1000, nowMsec/1000)
+		})
+	})
+</script></body>
