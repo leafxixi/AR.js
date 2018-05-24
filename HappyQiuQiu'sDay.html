@@ -164,7 +164,7 @@
 		mixer = new THREE.AnimationMixer( avatar );
 		var action = mixer.clipAction( animations[ 0 ] ).play();
 
-		avatar.scale.set( 0.5, 0.5, 0.5 );
+		avatar.scale.set( 0.3, 0.3, 0.3 );
 		
         avatar.position.set( 0, -2, 1 );
 
@@ -186,7 +186,7 @@
 	textloader.load( 'three.js/examples/fonts/helvetiker_bold.typeface.json', function ( font ) {
 		var textGeo = new THREE.TextBufferGeometry( "Happy Children's Day!\n  My Darling QiuQiu!", {
 			font: font,
-			size: 10,
+			size: 5,
 			height: 1,
 			curveSegments: 1,
 			bevelThickness: 1,
@@ -202,7 +202,7 @@
 		mesh.castShadow = true;
 		mesh.receiveShadow = true;
 		mesh.scale.set( 0.02, 0.02, 0.02 );
-		mesh.position.set( -2, 0, 1);
+		mesh.position.set( -0.5, 0, 1);
 		mesh.rotation.set( -Math.PI/2,0,0);
 		smoothedRoot.add( mesh );
 	} );
